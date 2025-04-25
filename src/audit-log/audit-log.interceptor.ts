@@ -15,6 +15,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ActionType } from './action.enum';
 import { mergeMap } from 'rxjs/operators';
 import { Reflector } from '@nestjs/core';
+import { NO_SELECT_AUDIT_KEY } from './decorators/no-select-audit.decorator';
 
 @Injectable()
 export class AuditLogInterceptor implements NestInterceptor {
@@ -31,10 +32,10 @@ export class AuditLogInterceptor implements NestInterceptor {
     const ipAddress = request.ip ?? 'N/A';
     const action = this.getActionTypeFromMethod(request.method);
 
-    const noAudit = this.reflector.getAllAndOverride<boolean>('noSelectAudit', [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const noAudit = this.reflector.getAllAndOverride<boolean>(
+      NO_SELECT_AUDIT_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (action === ActionType.SELECT && noAudit) {
       return next.handle();
