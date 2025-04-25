@@ -29,17 +29,16 @@ export class AuditLogInterceptor implements NestInterceptor {
     const traceId = request.headers['x-amzn-trace-id'] ?? 'N/A';
     const userName = request.headers['username'] ?? 'Unknown User';
     const ipAddress = request.ip ?? 'N/A';
+    const action = this.getActionTypeFromMethod(request.method);
 
     const noAudit = this.reflector.getAllAndOverride<boolean>('noSelectAudit', [
       context.getHandler(),
       context.getClass(),
     ]);
 
-    if (request.method === 'GET' && noAudit) {
+    if (action === ActionType.SELECT && noAudit) {
       return next.handle();
     }
-
-    const action = this.getActionTypeFromMethod(request.method);
 
     return next.handle().pipe(
       mergeMap((data) => {
