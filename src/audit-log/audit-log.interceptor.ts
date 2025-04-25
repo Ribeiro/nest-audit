@@ -30,6 +30,15 @@ export class AuditLogInterceptor implements NestInterceptor {
     const userName = request.headers['username'] ?? 'Unknown User';
     const ipAddress = request.ip ?? 'N/A';
 
+    const noAudit = this.reflector.getAllAndOverride<boolean>('noSelectAudit', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (request.method === 'GET' && noAudit) {
+      return next.handle();
+    }
+
     const action = this.getActionTypeFromMethod(request.method);
 
     return next.handle().pipe(
@@ -43,14 +52,12 @@ export class AuditLogInterceptor implements NestInterceptor {
         auditLog.createdAt = new Date();
 
         if (action === ActionType.UPDATE && data.oldData && data.newData) {
-          auditLog.oldData = JSON.stringify(data.oldData);
-          auditLog.newData = JSON.stringify(data.newData);
+          auditLog.oldData = data.oldData;
+          auditLog.newData = data.newData;
         }
 
-        // Usando "from" para transformar a Promise em Observable
         return from(this.auditLogRepository.save(auditLog)).pipe(
           mergeMap(() => {
-            // Após a gravação no banco, retorna os dados originais
             return [data];
           }),
         );
